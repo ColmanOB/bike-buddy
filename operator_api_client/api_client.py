@@ -4,6 +4,7 @@ import json
 BASE_URL_JC_DECAUX = "https://api.jcdecaux.com/vls/v1/"
 BASE_URL_AN_ROTHAR_NUA = "https://data.bikeshare.ie/dataapi/resources/station/data/list"
 BASE_URL_NEXT_BIKE = "https://api.nextbike.net/maps/nextbike-live.json"
+BASE_URL_BLEEPER_BIKES = "https://bleeperbike.staging.derilinx.com/last_snapshot"
 
 
 def get_stations_jc_decaux(contract, api_key):
@@ -42,3 +43,16 @@ def get_stations_nextbike(city):
     :return: A dictionary containing some metadata, and data relating to each station in the city.
     """
     return call_api('GET', BASE_URL_NEXT_BIKE + "?city=" + str(city))
+
+
+def get_bikes_bleeperbikes():
+    """
+    Gets a list of all stations within a specific contract, i.e. in a town or city.
+    It makes a GET request to the JC Decaux API using a URL in the following format:
+    https://api.jcdecaux.com/vls/v1/stations?contract={contract_name}&apiKey={api_key}
+    :param contract: The name of the town / city where the particular bike share scheme operates.
+    :param api_key: A unique API key. See https://developer.jcdecaux.com.
+    :return: A list of bike stations belonging to the particular contract, where each bike station's data is a dict
+    """
+    url = BASE_URL_BLEEPER_BIKES
+    return call_api('GET', url)

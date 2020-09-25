@@ -38,5 +38,9 @@ def stations_nextbike(city):
     return str(get_stations_nextbike(city))
 
 
+@app.route('/bleeperbikes')
+def bleeperbikes():
+    return str(get_bikes_bleeperbikes())
+
 if __name__ == '__main__':
     app.run(debug=True)

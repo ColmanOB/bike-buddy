@@ -9,8 +9,9 @@ def call_api(http_verb, url, request_parameters=None):
         failure_response = {"HTTP Status": 422, "Reason": "http_verb must be either GET or POST"}
         return failure_response
 
-    if response.status_code != 200:
+    # The Bleeper Bikes API returns 201 for successful responses
+    if response.status_code in {200, 201}:
+        return response.json()
+    else:
         failure_response = {"HTTP Status": response.status_code, "Reason": response.reason}
         return failure_response
-
-    return response.json()
