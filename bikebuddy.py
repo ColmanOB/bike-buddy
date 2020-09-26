@@ -1,4 +1,3 @@
-import os
 from flask import Flask, request
 import yaml
 from operator_api_client.api_client import *
@@ -23,24 +22,25 @@ API_KEY_JC_DECAUX = app_settings['operator_api_keys'].get('jc_decaux')
 API_KEY_AN_ROTHAR_NUA = app_settings['operator_api_keys'].get('an_rothar_nua')
 
 
-@app.route('/jc_decaux/stations/<contract>')
+@app.route('/getupdates/stations/jcdecaux<contract>')
 def stations_jc_decaux(contract):
-    return str(get_stations_jc_decaux(contract, API_KEY_JC_DECAUX))
+    #return str(get_stations_jc_decaux(contract, API_KEY_JC_DECAUX))
+    return get_stations_jc_decaux(contract, API_KEY_JC_DECAUX)
 
 
-@app.route('/an_rothar_nua/stations/<scheme>')
+@app.route('/getupdates/stations/anrotharnua/<scheme>')
 def stations_an_rothar_nua(scheme):
-    return str(get_stations_an_rothar_nua(scheme, API_KEY_AN_ROTHAR_NUA))
+    return get_stations_an_rothar_nua(scheme, API_KEY_AN_ROTHAR_NUA)
 
 
-@app.route('/nextbike/stations/<city>')
+@app.route('/getupdates/stations/nextbike/<city>')
 def stations_nextbike(city):
-    return str(get_stations_nextbike(city))
+    return get_stations_nextbike(city)
 
 
-@app.route('/bleeperbikes')
+@app.route('/getupdates/bikes/bleeperbikes')
 def bleeperbikes():
-    return str(get_bikes_bleeperbikes())
+    return get_bikes_bleeperbikes()
 
 if __name__ == '__main__':
     app.run(debug=True)

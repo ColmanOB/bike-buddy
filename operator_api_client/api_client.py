@@ -1,5 +1,5 @@
 from utils.http_utils import *
-import json
+
 
 BASE_URL_JC_DECAUX = "https://api.jcdecaux.com/vls/v1/"
 BASE_URL_AN_ROTHAR_NUA = "https://data.bikeshare.ie/dataapi/resources/station/data/list"
@@ -54,5 +54,4 @@ def get_bikes_bleeperbikes():
     :param api_key: A unique API key. See https://developer.jcdecaux.com.
     :return: A list of bike stations belonging to the particular contract, where each bike station's data is a dict
     """
-    url = BASE_URL_BLEEPER_BIKES
-    return call_api('GET', url)
+    return call_api('GET', BASE_URL_BLEEPER_BIKES)
