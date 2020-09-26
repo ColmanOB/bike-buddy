@@ -11,7 +11,7 @@ def call_api(http_verb, url, request_parameters=None):
 
     # The Bleeper Bikes API returns 201 for successful responses
     if response.status_code in {200, 201}:
-        return response.json()
+       return response.text
     else:
         failure_response = {"HTTP Status": response.status_code, "Reason": response.reason}
         return failure_response
