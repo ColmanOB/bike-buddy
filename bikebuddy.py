@@ -22,24 +22,27 @@ API_KEY_JC_DECAUX = app_settings['operator_api_keys'].get('jc_decaux')
 API_KEY_AN_ROTHAR_NUA = app_settings['operator_api_keys'].get('an_rothar_nua')
 
 
-@app.route('/getupdates/stations/jcdecaux<contract>')
-def stations_jc_decaux(contract):
-    #return str(get_stations_jc_decaux(contract, API_KEY_JC_DECAUX))
+# These getupdates methods will be changed to return a success/fail message, 
+# rather than a JSON string as they do now.
+# This will be done after the database layer is implemented and the getupdates
+# result in insert/update to the database
+@app.route('/getupdates/stations/jcdecaux/<contract>')
+def update_stations_jc_decaux(contract):
     return get_stations_jc_decaux(contract, API_KEY_JC_DECAUX)
 
 
 @app.route('/getupdates/stations/anrotharnua/<scheme>')
-def stations_an_rothar_nua(scheme):
+def update_stations_an_rothar_nua(scheme):
     return get_stations_an_rothar_nua(scheme, API_KEY_AN_ROTHAR_NUA)
 
 
 @app.route('/getupdates/stations/nextbike/<city>')
-def stations_nextbike(city):
+def update_stations_nextbike(city):
     return get_stations_nextbike(city)
 
 
 @app.route('/getupdates/bikes/bleeperbikes')
-def bleeperbikes():
+def update_bikes_bleeperbikes():
     return get_bikes_bleeperbikes()
 
 if __name__ == '__main__':
