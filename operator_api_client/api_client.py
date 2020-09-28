@@ -28,9 +28,16 @@ def get_stations_jc_decaux(contract, api_key):
     jc_decaux_stations = call_api('GET', url)
 
     # insert the list of stations into the database
-    # TODO: change this to an 'upsert' operation
+    # currently just calls a stub method that does nothing
     for station in jc_decaux_stations:
-        col.insert_one(station)
+        #col.insert_one(station)
+        create_mongo_doc(station)
+
+def create_mongo_doc(station):
+    # TODO: turn this into a method that turns a station into a mongodb object
+    # The main things to change are turning the coordinates into a GeoJSON point
+    # And turning the timestamp into something human readable
+    print(str(type(station)))
     
 
 def get_stations_an_rothar_nua(scheme, api_key):
