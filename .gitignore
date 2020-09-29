@@ -1,3 +1,4 @@
 config/config.yaml
 utils/__pycache__/http_utils.cpython-38.pyc
 operator_api_client/__pycache__
+scratchpad.py

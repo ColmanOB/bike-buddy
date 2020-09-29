@@ -27,17 +27,16 @@ def get_stations_jc_decaux(contract, api_key):
     # get the latest list of JC Decaux bike stations
     jc_decaux_stations = call_api('GET', url)
 
-    # insert the list of stations into the database
-    # currently just calls a stub method that does nothing
+    # transform each station in the list, and insert into mongodb
     for station in jc_decaux_stations:
-        #col.insert_one(station)
-        create_mongo_doc(station)
+        create_mongo_doc_jc_decaux(station)
+        col.insert_one(station)
 
-def create_mongo_doc(station):
-    # TODO: turn this into a method that turns a station into a mongodb object
-    # The main things to change are turning the coordinates into a GeoJSON point
-    # And turning the timestamp into something human readable
-    print(str(type(station)))
+def create_mongo_doc_jc_decaux(station):
+    # TODO: turn this into a method that transforms a station into a format ready to insert into mongodb
+    # turn the "position" attribute into a GeoJSON Point 
+    station["position"] = { "type": "Point", "coordinates": [ station["position"]["lng"], station["position"]["lat"] ] }
+    return station
     
 
 def get_stations_an_rothar_nua(scheme, api_key):
