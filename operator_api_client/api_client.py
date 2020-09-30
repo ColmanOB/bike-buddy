@@ -10,33 +10,61 @@ BASE_URL_BLEEPER_BIKES = "https://bleeperbike.staging.derilinx.com/last_snapshot
 
 def get_stations_jc_decaux(contract, api_key):
     """
-    Gets a list of all stations within the specified town/city.
+    Gets a list of all JC Decaux bike stations within the specified town/city.
     Results in a GET request to the JC Decaux API using a URL in this format:
     https://api.jcdecaux.com/vls/v1/stations?contract={contract_name}&apiKey={api_key}
     :param contract: The name of the town / city where the scheme operates.
     :param api_key: A unique API key. See https://developer.jcdecaux.com.
     :return: A string of JSON with data related to each JC Decaux bike station in the city
     """
+    # Build the URL and call the JC Decaux API
     url = BASE_URL_JC_DECAUX + "stations?contract=" + contract + "&apiKey=" + api_key
+    stations = call_api('GET', url)
 
+    # Transform the location of each station to a GeoJSON point
+    for station in stations:
+        create_geojson_point(station, 'JCDecaux')
+
+    # Update the list of JC Decaux stations in the database
+    return update_stations_jc_decaux(stations)
+
+def create_geojson_point(station, operator):
+    """ 
+    Transforms a pair of latitude and longitude values to a GeoJSON point.
+    This facilitates geospatial operations in MongoDB.
+    """
+    if operator == "JCDecaux": 
+        station["position"] = {"type": "Point", "coordinates": [ station["position"]["lng"], station["position"]["lat"] ] }
+        return station
+
+def update_stations_jc_decaux(stations):
+    """
+    Connects to the database and does an upsert for each station passed in
+    """
     # set up the MongoDB connection
     client = MongoClient('localhost')
     db = client.bikebuddy
     col = db.jc_decaux
+    # gather database operation results
+    matched_count = 0
+    modified_count = 0
 
-    # get the latest list of JC Decaux bike stations
-    jc_decaux_stations = call_api('GET', url)
+    # update the records, inserting any stations that don't already exist
+    for station in stations:
+        result = col.update_one(
+            {"number" : station["number"]},
+            {"$set": station},
+            upsert=True)
 
-    # transform each station in the list, and insert into mongodb
-    for station in jc_decaux_stations:
-        create_mongo_doc_jc_decaux(station)
-        col.insert_one(station)
+        matched_count += result.matched_count
+        modified_count += result.modified_count
+        
+    summary = {
+        "matched": matched_count,
+        "modified": modified_count,
+    }
 
-def create_mongo_doc_jc_decaux(station):
-    # TODO: turn this into a method that transforms a station into a format ready to insert into mongodb
-    # turn the "position" attribute into a GeoJSON Point 
-    station["position"] = { "type": "Point", "coordinates": [ station["position"]["lng"], station["position"]["lat"] ] }
-    return station
+    return summary
     
 
 def get_stations_an_rothar_nua(scheme, api_key):
