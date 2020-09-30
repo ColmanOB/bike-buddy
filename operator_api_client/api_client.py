@@ -34,7 +34,13 @@ def create_geojson_point(station, operator):
     This facilitates geospatial operations in MongoDB.
     """
     if operator == "JCDecaux": 
-        station["position"] = {"type": "Point", "coordinates": [ station["position"]["lng"], station["position"]["lat"] ] }
+        station["position"] = {
+            "type": "Point", 
+            "coordinates": [ 
+                station["position"]["lng"], 
+                station["position"]["lat"] 
+            ] 
+        }
         return station
 
 def update_stations_jc_decaux(stations):
@@ -42,29 +48,30 @@ def update_stations_jc_decaux(stations):
     Connects to the database and does an upsert for each station passed in
     """
     # set up the MongoDB connection
-    client = MongoClient('localhost')
-    db = client.bikebuddy
-    col = db.jc_decaux
-    # gather database operation results
-    matched_count = 0
-    modified_count = 0
+    with MongoClient('localhost') as client:
+        db = client.bikebuddy
+        col = db.jc_decaux
+        # gather database operation results
+        matched_count = 0
+        modified_count = 0
 
-    # update the records, inserting any stations that don't already exist
-    for station in stations:
-        result = col.update_one(
-            {"number" : station["number"]},
-            {"$set": station},
-            upsert=True)
+        # update the records, inserting any stations that don't already exist
+        for station in stations:
+            result = col.update_one(
+                {"number" : station["number"]},
+                {"$set": station},
+                upsert=True
+            )
 
-        matched_count += result.matched_count
-        modified_count += result.modified_count
-        
-    summary = {
-        "matched": matched_count,
-        "modified": modified_count,
-    }
+            matched_count += result.matched_count
+            modified_count += result.modified_count
+            
+        summary = {
+            "matched": matched_count,
+            "modified": modified_count,
+        }
 
-    return summary
+        return summary
     
 
 def get_stations_an_rothar_nua(scheme, api_key):
@@ -77,8 +84,10 @@ def get_stations_an_rothar_nua(scheme, api_key):
     """
     valid_scheme_id = {'-1', '2', '3', '4'}
     if str(scheme) not in valid_scheme_id:
-        failure_response = {"HTTP Status": 422, "Reason": "Invalid scheme ID.  Scheme ID should be one of %r." % valid_scheme_id}
-        return failure_response
+        return {
+            "HTTP Status": 422, 
+            "Reason": "Invalid scheme ID.  Scheme ID should be one of %r." % valid_scheme_id
+        }
 
     return call_api('POST', BASE_URL_AN_ROTHAR_NUA, {'key': api_key, 'schemeId': scheme})
 
