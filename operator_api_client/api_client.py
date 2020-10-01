@@ -9,11 +9,10 @@ BASE_URL_NEXT_BIKE = "https://api.nextbike.net/maps/nextbike-live.json"
 BASE_URL_BLEEPER_BIKES = "https://bleeperbike.staging.derilinx.com/last_snapshot"
 
 
-def get_stations_jc_decaux(contract, api_key):
+def update_jc_decaux(contract, api_key):
     """
-    Gets a list of all JC Decaux bike stations within the specified town/city.
-    Results in a GET request to the JC Decaux API using a URL in this format:
-    https://api.jcdecaux.com/vls/v1/stations?contract={contract_name}&apiKey={api_key}
+    Updates the database with latest data for all bike stations in the JC Decaux 'contract'.
+
     :param contract: The name of the town / city where the scheme operates.
     :param api_key: A unique API key. See https://developer.jcdecaux.com.
     :return: A string of JSON with data related to each JC Decaux bike station in the city
@@ -31,13 +30,14 @@ def get_stations_jc_decaux(contract, api_key):
     return update_stations(SCHEME_OPERATOR, stations)
 
 
-def get_stations_an_rothar_nua(scheme, api_key):
+def update_an_rothar_nua(scheme, api_key):
     """
-    Gets a list of An Rothar Nua bike stations.
+    Updates the database with latest data for all An Rothar Nua stations in the specified scheme.
+
     :param scheme: The An Rothar Nua ID number for the city of interest, or pass -1 to get all stations.
         Valid scheme IDs are; -1 = All cities, 2 = Cork, 3 = Limerick, 4 = Galway
     :param api_key: An API key that can only be generated on request to An Rothar Nua.
-    :return: A string of JSON data relating to each bike station
+    :return: A JSON object with a summary of the database operations performed
     """
     SCHEME_OPERATOR = "an_rothar_nua"
     valid_scheme_id = {'-1', '2', '3', '4'}
@@ -58,11 +58,12 @@ def get_stations_an_rothar_nua(scheme, api_key):
     return update_stations(SCHEME_OPERATOR, stations["data"])
 
 
-def get_stations_nextbike(city):
+def update_nextbike(city):
     """
-    Gets the data for all bike stations in the NextBike scheme in a specified city.
+    Updates the database with the latest data for all Nextbike stations in the specified city.
+
     :param city: Numeric ID of an individual city in the NextBike database. Belfast is 238.
-    :return: A JSON string with some metadata, and data relating to each station in the city.
+    :return: A JSON object with a summary of the database operations performed
     """
     SCHEME_OPERATOR = "nextbike"
     stations = call_api('GET', BASE_URL_NEXT_BIKE + "?city=" + str(city))
@@ -76,10 +77,12 @@ def get_stations_nextbike(city):
     return update_stations(SCHEME_OPERATOR, stations["countries"][0]["cities"][0]["places"])
 
 
-def get_bikes_bleeperbikes():
+def update_bleeperbikes():
     """
-    Gets a list of all Bleeper Bikes in Dublin.  No API key is needed.
-    :return: A list of Bleeper Bikes
+    Updates the database with latest data for all Bleeper Bikes in Dublin.  
+    No API key is needed to access the Bleeper Bikes API.
+
+    :return: A JSON object with a summary of the database operations performed
     """
     #return call_api('GET', BASE_URL_BLEEPER_BIKES)
     SCHEME_OPERATOR = "bleeper_bikes"
@@ -94,6 +97,7 @@ def get_bikes_bleeperbikes():
 def call_api(http_verb, url, request_parameters=None):
     """
     Makes the HTTPS request to an operator API and returns the JSON response.
+
     :param http_verb: Either GET or POST, depending on what the individual API expects
     :param url: The scheme operator's URL for the resource to be retrieved
     :param request_parameters: Used where the request is a POST with parameters in the body
@@ -124,7 +128,12 @@ def call_api(http_verb, url, request_parameters=None):
 
 def update_stations(operator, stations):
     """
-    Connects to the database and does an upsert for each station passed in.
+    Connects to the database and does an upsert for each bike station passed in.
+    The operator argument determines which collection in the database will be updated.
+
+    :param operator: A string representation of the scheme operator's name
+    :param stations: A list of dicts, where each dict contains data related to a bike station
+    :return: A JSON object containing a summary of the database operations peformed
     """
     # Connect to MongoDB & specify a collection based on the operator argument provided
     with MongoClient('localhost') as client:
@@ -167,7 +176,12 @@ def update_stations(operator, stations):
 
 def update_bikes(operator, bikes):
     """
-    Connects to the database and does an upsert for each station passed in.
+    Connects to the database and does an upsert for each bike passed in.
+    The operator argument determines which collection in the database will be updated.
+
+    :param operator: A string representation of the scheme operator's name
+    :param bikes: A list of dicts, where each dict contains data related to an individual bike
+    :return: A JSON object containing a summary of the database operations peformed
     """
     # Connect to MongoDB & specify a collection based on the operator argument provided
     with MongoClient('localhost') as client:
@@ -178,7 +192,7 @@ def update_bikes(operator, bikes):
         modified_count = 0
 
         for bike in bikes:
-            # The matching criterion for the update varies depending on the scheme operator
+            # Allows for other dockless operators who might enter the Irish market
             if operator == "bleeper_bikes":
                 result = col.update_one(
                     {"frame_id" : bike["frame_id"]},
@@ -200,7 +214,10 @@ def create_geojson_point(operator, entity):
     """ 
     Transforms a pair of latitude and longitude values to a GeoJSON point.
     This facilitates geospatial operations in MongoDB.
-    Where to find the location data varies per scheme operator.
+
+    :param operator: A string representation of the scheme operator's name
+    :param entity: A dict containing the data for either a bike station or an individual bike
+    :return: The 'entity' dict that was passed in, with a new GeoJSON attribute called 'position'
     """
     if operator == "jc_decaux": 
         entity["position"] = {
@@ -226,14 +243,4 @@ def create_geojson_point(operator, entity):
                 entity["lat"] 
             ] 
         }
-        """
-    elif operator == "bleeper_bikes":
-        entity["position"] = {
-            "type": "Point", 
-            "coordinates": [ 
-                entity["longitude"], 
-                entity["latitude"] 
-            ] 
-        }
-        """
     return entity
