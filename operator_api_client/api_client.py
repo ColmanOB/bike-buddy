@@ -1,6 +1,7 @@
 import requests
 import json
 from pymongo import MongoClient
+from flask import jsonify
 
 BASE_URL_JC_DECAUX = "https://api.jcdecaux.com/vls/v1/"
 BASE_URL_AN_ROTHAR_NUA = "https://data.bikeshare.ie/dataapi/resources/station/data/list"
@@ -28,51 +29,6 @@ def get_stations_jc_decaux(contract, api_key):
     # Update the list of JC Decaux stations in the database
     return update_stations_jc_decaux(stations)
 
-def create_geojson_point(station, operator):
-    """ 
-    Transforms a pair of latitude and longitude values to a GeoJSON point.
-    This facilitates geospatial operations in MongoDB.
-    """
-    if operator == "JCDecaux": 
-        station["position"] = {
-            "type": "Point", 
-            "coordinates": [ 
-                station["position"]["lng"], 
-                station["position"]["lat"] 
-            ] 
-        }
-        return station
-
-def update_stations_jc_decaux(stations):
-    """
-    Connects to the database and does an upsert for each station passed in
-    """
-    # set up the MongoDB connection
-    with MongoClient('localhost') as client:
-        db = client.bikebuddy
-        col = db.jc_decaux
-        # gather database operation results
-        matched_count = 0
-        modified_count = 0
-
-        # update the records, inserting any stations that don't already exist
-        for station in stations:
-            result = col.update_one(
-                {"number" : station["number"]},
-                {"$set": station},
-                upsert=True
-            )
-
-            matched_count += result.matched_count
-            modified_count += result.modified_count
-            
-        summary = {
-            "matched": matched_count,
-            "modified": modified_count,
-        }
-
-        return summary
-    
 
 def get_stations_an_rothar_nua(scheme, api_key):
     """
@@ -89,7 +45,14 @@ def get_stations_an_rothar_nua(scheme, api_key):
             "Reason": "Invalid scheme ID.  Scheme ID should be one of %r." % valid_scheme_id
         }
 
-    return call_api('POST', BASE_URL_AN_ROTHAR_NUA, {'key': api_key, 'schemeId': scheme})
+    # Get the list of An Rothar Nua Stations
+    stations = call_api('POST', BASE_URL_AN_ROTHAR_NUA, {'key': api_key, 'schemeId': scheme})
+
+    # Transform the location data of each station to a GeoJSON point
+    for station in stations["data"]:
+        create_geojson_point(station, 'AnRotharNua')
+
+    return update_stations_an_rothar_nua(stations)
 
 
 def get_stations_nextbike(city):
@@ -122,12 +85,105 @@ def call_api(http_verb, url, request_parameters=None):
     elif http_verb.lower() == 'post':
         response = requests.post(url, data=request_parameters, timeout=10)
     else:
-        failure_response = {"HTTP Status": 422, "Reason": "http_verb must be either GET or POST"}
-        return failure_response
+        failure_response = {
+            "HTTP Status": 422, 
+            "Reason": "http_verb must be either GET or POST"
+        }
+        return jsonify(failure_response)
 
     # The Bleeper Bikes API returns 201 for successful responses
     if response.status_code in {200, 201}:
        return response.json()
     else:
-        failure_response = {"HTTP Status": response.status_code, "Reason": response.reason}
-        return failure_response
+        failure_response = {
+            "HTTP Status": response.status_code, 
+            "Reason": response.reason
+        }
+        return jsonify(failure_response)
+
+
+def update_stations_jc_decaux(stations):
+    """
+    Connects to the database and does an upsert for each station passed in
+    """
+    # set up the MongoDB connection
+    with MongoClient('localhost') as client:
+        db = client.bikebuddy
+        col = db.jc_decaux
+        # gather database operation results
+        matched_count = 0
+        modified_count = 0
+
+        # update the records, inserting any stations that don't already exist
+        for station in stations:
+            result = col.update_one(
+                {"number" : station["number"]},
+                {"$set": station},
+                upsert=True
+            )
+
+            matched_count += result.matched_count
+            modified_count += result.modified_count
+            
+        summary = {
+            "matched": matched_count,
+            "modified": modified_count,
+        }
+
+        return jsonify(summary)
+
+def update_stations_an_rothar_nua(stations):
+    """
+    Connects to the database and does an upsert for each station passed in
+    """
+    # set up the MongoDB connection
+    with MongoClient('localhost') as client:
+        db = client.bikebuddy
+        col = db.an_rothar_nua
+        # gather database operation results
+        matched_count = 0
+        modified_count = 0
+
+        # update the records in the database, inserting any stations that don't already exist
+        for station in stations["data"]:
+            result = col.update_one(
+                {"stationId" : station["stationId"]},
+                {"$set": station},
+                upsert=True
+            )
+
+            matched_count += result.matched_count
+            modified_count += result.modified_count
+            
+        summary = {
+            "matched": matched_count,
+            "modified": modified_count,
+        }
+
+        return jsonify(summary)
+
+
+def create_geojson_point(station, operator):
+    """ 
+    Transforms a pair of latitude and longitude values to a GeoJSON point.
+    This facilitates geospatial operations in MongoDB.
+    """
+    if operator == "JCDecaux": 
+        station["position"] = {
+            "type": "Point", 
+            "coordinates": [ 
+                station["position"]["lng"], 
+                station["position"]["lat"] 
+            ] 
+        }
+
+    elif operator == "AnRotharNua":
+        station["position"] = {
+            "type": "Point", 
+            "coordinates": [ 
+                station["longitude"], 
+                station["latitude"]
+            ] 
+        }
+
+    return station
