@@ -15,13 +15,10 @@ def read_app_settings():
     document = open('config/config.yaml', 'r')
     return yaml.load(document, Loader=yaml.FullLoader)
 
-
 # Get important configuration details from a .yaml file
 app_settings = read_app_settings()
 
-# JC Decaux & An Rothar Nua both require an API key to be provided
-API_KEY_JC_DECAUX = app_settings['operator_api_keys'].get('jc_decaux')
-API_KEY_AN_ROTHAR_NUA = app_settings['operator_api_keys'].get('an_rothar_nua')
+# Main API methods will go here
 
 if __name__ == '__main__':
     app.run(debug=True)

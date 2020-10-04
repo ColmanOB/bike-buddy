@@ -2,6 +2,7 @@ import requests
 import json
 from pymongo import MongoClient
 from flask import jsonify
+from datetime import datetime
 
 BASE_URL_JC_DECAUX = "https://api.jcdecaux.com/vls/v1/"
 BASE_URL_AN_ROTHAR_NUA = "https://data.bikeshare.ie/dataapi/resources/station/data/list"
@@ -25,6 +26,9 @@ def update_jc_decaux(contract, api_key):
     # Transform the location of each station to a GeoJSON point
     for station in stations:
         create_geojson_point(SCHEME_OPERATOR, station)
+        format_timestamp(SCHEME_OPERATOR, station)
+        # TODO: fix up the timestamp
+        # TODO: delete duplicate / useless items
 
     # Update the list of JC Decaux stations in the database
     return update_stations(SCHEME_OPERATOR, stations)
@@ -53,6 +57,7 @@ def update_an_rothar_nua(scheme, api_key):
     # Transform the location data of each station to a GeoJSON point
     for station in stations["data"]:
         create_geojson_point(SCHEME_OPERATOR, station)
+        drop_fields(SCHEME_OPERATOR, station)
 
     # Update any An Rothar Nua stations with changes, and return a summary of the database operations
     return update_stations(SCHEME_OPERATOR, stations["data"])
@@ -72,6 +77,7 @@ def update_nextbike(city):
     # Nextbike returns the stations within a complex nested structure
     for station in stations["countries"][0]["cities"][0]["places"]:
         create_geojson_point(SCHEME_OPERATOR, station)
+        drop_fields(SCHEME_OPERATOR, station)
 
     # Update any Nextbike stations with changes, and return a summary of the database operations
     return update_stations(SCHEME_OPERATOR, stations["countries"][0]["cities"][0]["places"])
@@ -90,6 +96,7 @@ def update_bleeperbikes():
 
     for bike in bikes:
         create_geojson_point(SCHEME_OPERATOR, bike)
+        drop_fields(SCHEME_OPERATOR, station)
 
     return update_bikes(SCHEME_OPERATOR, bikes)
 
@@ -159,7 +166,7 @@ def update_stations(operator, stations):
                 )
             elif operator == "nextbike":
                 result = col.update_one(
-                    {"uid" : station["uid"]},
+                    {"number" : station["number"]},
                     {"$set": station},
                     upsert=True
                 )
@@ -243,4 +250,54 @@ def create_geojson_point(operator, entity):
                 entity["lat"] 
             ] 
         }
+    return entity
+
+
+def format_timestamp(operator, entity):
+    """ 
+    Converts time data from a bike scheme operator's API to a datetime object
+
+    :param operator: A string representation of the scheme operator's name
+    :param entity: A dict containing the data for either a bike station or an individual bike
+    :return: The 'entity' dict that was passed in, with a timestamp added
+    """
+    if operator == "jc_decaux":
+        timestamp = (int(entity["last_update"])/1000) 
+        entity["last_update"] = datetime.fromtimestamp()
+
+    elif operator in ("an_rothar_nua", "bleeper_bikes"):
+        pass
+        
+    elif operator == "nextbike":
+        pass
+
+    return entity
+
+
+def drop_fields(operator, entity):
+    """ 
+    Drops some fields from an operator's API response.
+
+    :param operator: A string representation of the scheme operator's name
+    :param entity: A dict containing the data for either a bike station or an individual bike
+    :return: The 'entity' dict that was passed in, with some items dropped
+    """
+    if operator == "jc_decaux":
+       pass
+
+    elif operator == "an_rothar_nua":
+        del entity["latitude"]
+        del entity["longitude"]
+
+    elif operator == "bleeper_bikes":
+        del entity["latitude"]
+        del entity["longitude"]
+        
+    elif operator == "nextbike":
+        del entity["lat"]
+        del entity["lng"]
+        del entity["terminal_type"]
+        del entity["bike_numbers"]
+        del entity["bike_types"]
+
     return entity

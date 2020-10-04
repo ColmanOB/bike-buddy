@@ -1,14 +1,11 @@
 import yaml
 from flask import Blueprint
-from operator_api_client.api_client import *
+from operator_api_client.api_client import update_jc_decaux, update_an_rothar_nua, update_nextbike, update_bleeperbikes
+
 
 db_updaters = Blueprint('db_updaters', __name__)
 
 def read_app_settings():
-    """
-    Open and read the YAML config file for the application.
-    :return: The contents of the YAML config file
-    """
     document = open('config/config.yaml', 'r')
     return yaml.load(document, Loader=yaml.FullLoader)
 
